@@ -136,7 +136,7 @@ class SQS extends Service {
       return Promise.reject(error);
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const sub = Consumer.create({
         queueUrl,
         handleMessage: (msg, done) => {
@@ -161,7 +161,6 @@ class SQS extends Service {
         this.emitError('sub.ERROR', err, {
           queueName: name,
         });
-        reject(err);
       });
       sub.on('processing_error', (err) => {
         this.emitError('sub.ERROR', err, {
@@ -170,6 +169,7 @@ class SQS extends Service {
       });
       this.emitSuccess(`Subscribed to ${queueUrl}`);
       sub.start();
+      resolve(sub);
     });
   }
 }
