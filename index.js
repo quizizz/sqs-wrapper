@@ -124,18 +124,22 @@ class SQS extends Service {
       });
   }
 
-
-  /**
-   * Subscribe to a queue, using long polling
-   */
-  subscribe(name, cb, opts = {}) {
+  getQueueUrl(name) {
     const queueUrl = this.queues[name];
     if (!queueUrl) {
       const error = new Error(`Queue ${name} does not exists`);
       this.emitError(error.type, error, error.cause);
       return Promise.reject(error);
     }
+    return queueUrl;
+  }
 
+
+  /**
+   * Subscribe to a queue, using long polling
+   */
+  subscribe(name, cb, opts = {}) {
+    const queueUrl = this.getQueueUrl(name);
     return new Promise((resolve) => {
       const sub = Consumer.create({
         queueUrl,
@@ -171,6 +175,59 @@ class SQS extends Service {
       sub.start();
       resolve(sub);
     });
+  }
+
+
+  deleteMessage(name, messageId, handle) {
+    const queueUrl = this.getQueueUrl(name);
+    const params = {
+      QueueUrl: queueUrl,
+      ReceiptHandle: handle,
+    };
+
+    return this.client.deleteMessage(params).promise();
+  }
+
+
+  returnMessage(name, messageId, handle) {
+    const queueUrl = this.getQueueUrl(name);
+    const params = {
+      QueueUrl: queueUrl,
+      ReceiptHandle: handle,
+      VisibilityTimeout: 0,
+    };
+    return this.client.changeMessageVisibility(params).promise();
+  }
+
+
+  fetchMessages(name, number = 10) {
+    const queueUrl = this.getQueueUrl(name);
+    const params = {
+      QueueUrl: queueUrl,
+      MaxNumberOfMessages: number,
+    };
+    return this.client.receiveMessage(params).promise().then(res => {
+      return res.Messages.map(msg => {
+        return {
+          data: misc.safeJSON(msg.Body),
+          ack: () => {
+            return this.deleteMessage(name, msg.MessageId, msg.ReceiptHandle);
+          },
+          nack: () => {
+            return this.returnMessage(name, msg.MessageId, msg.ReceiptHandle);
+          },
+        }, {
+          id: msg.MessageId,
+          handle: msg.ReceiptHandle,
+          queueAttributes: msg.Attributes,
+          messageAttributes: msg.MessageAttributes,
+        };
+      });
+    });
+  }
+
+  fetchOne(name) {
+    return this.fetchMessages(name, 1).then(messages => messages[0]);
   }
 }
 
