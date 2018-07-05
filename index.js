@@ -5,6 +5,7 @@
 const AWS = require('aws-sdk');
 const safeJSON = require('safely-parse-json');
 const Consumer = require('sqs-consumer');
+const uuid = require('uuid/v4');
 
 class SQS {
   constructor(name, emitter, config = {}) {
@@ -129,6 +130,37 @@ class SQS {
       QueueUrl: this.queues[name],
       MessageBody: JSON.stringify({ content, meta }),
     };
+    return this.client.sendMessage(params).promise()
+      .then((res) => res)
+      .catch((err) => {
+        this.error(err, {
+          queueName: name,
+          content,
+          meta,
+          handle,
+        });
+        if (handle === false) {
+          throw err;
+        }
+      });
+  }
+
+  publishFifo(name, content, meta = {}, group, handle = true) {
+    const queueUrl = this.queues[name];
+    if (!queueUrl) {
+      const error = new Error(`Queue ${name} does not exists`);
+      this.error(error, error.cause);
+      if (handle === false) {
+        return Promise.reject(error);
+      }
+    }
+    const params = {
+      QueueUrl: this.queues[name],
+      MessageBody: JSON.stringify({ content, meta }),
+      MessageGroupId: group.name,
+      MessageDeduplicationId: group.id,
+    };
+    console.log(params);
     return this.client.sendMessage(params).promise()
       .then((res) => res)
       .catch((err) => {

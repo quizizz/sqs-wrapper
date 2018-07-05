@@ -12,9 +12,11 @@ const sqs = new SQS('sqs', emitter);
 
 async function sub() {
   await sqs.init();
-  await sqs.createQueue('test');
+  await sqs.createQueue('test.fifo', {
+    FifoQueue: 'true',
+  });
 
-  await sqs.subscribe('test', (msg) => {
+  await sqs.subscribe('test.fifo', (msg) => {
     console.log(msg.data);
     setTimeout(() => {
       msg.ack();

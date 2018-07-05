@@ -1,5 +1,5 @@
 const EventEmitter = require('events').EventEmitter;
-
+const uuid = require('uuid/v4');
 const SQS = require('../index');
 
 const emitter = new EventEmitter();
@@ -9,20 +9,29 @@ emitter.on('success', console.log.bind(console));
 
 const sqs = new SQS('sqs', emitter);
 
+function getGroup() {
+  return {
+    name: 'testing',
+    id: uuid(),
+  };
+}
+
 async function push() {
   await sqs.init();
-  await sqs.createQueue('test');
+  await sqs.createQueue('test.fifo', {
+    FifoQueue: 'true',
+  });
 
   // First message
-  await sqs.publish('test', { message: 'one' });
+  await sqs.publishFifo('test.fifo', { message: 'one' }, {}, getGroup());
 
   // Second message
-  await sqs.publish('test', { message: 'two' });
-  await sqs.publish('test', { message: 'three' });
-  await sqs.publish('test', { message: 'four' });
-  await sqs.publish('test', { message: 'five' });
-  await sqs.publish('test', { message: 'six' });
-  await sqs.publish('test', { message: 'seven' });
+  await sqs.publishFifo('test.fifo', { message: 'two' }, {}, getGroup());
+  await sqs.publishFifo('test.fifo', { message: 'three' }, {}, getGroup());
+  await sqs.publishFifo('test.fifo', { message: 'four' }, {}, getGroup());
+  await sqs.publishFifo('test.fifo', { message: 'five' }, {}, getGroup());
+  await sqs.publishFifo('test.fifo', { message: 'six' }, {}, getGroup());
+  await sqs.publishFifo('test.fifo', { message: 'seven' }, {}, getGroup());
 }
 
 push().then(() => console.log('Pusblish')).catch(console.error.bind(console));
