@@ -3,20 +3,40 @@
  */
 
 const AWS = require('aws-sdk');
+const safeJSON = require('safely-parse-json');
 const Consumer = require('sqs-consumer');
 
-const Service = require('@akshendra/service');
-const misc = require('@akshendra/misc');
-
-
-class SQS extends Service {
+class SQS {
   constructor(name, emitter, config = {}) {
-    super(name, emitter, config);
+    this.name = name;
+    this.emitter = emitter;
     this.config = Object.assign({
       region: 'us-east-1',
     }, config);
     this.client = null;
     this.queues = {};
+  }
+
+  log(message, data) {
+    this.emitter.emit('log', {
+      service: this.name,
+      message,
+      data,
+    });
+  }
+
+  success(message, data) {
+    this.emitter.emit('success', {
+      service: this.name, message, data,
+    });
+  }
+
+  error(err, data) {
+    this.emitter.emit('error', {
+      service: this.name,
+      data,
+      err,
+    });
   }
 
   init() {
@@ -26,7 +46,7 @@ class SQS extends Service {
       QueueNamePrefix: '',
     }).promise()
       .then((response) => {
-        this.emitInfo('connection.SUCCESS', `Connected on SQS:${this.name}`, this.config);
+        this.log(`Connected on SQS:${this.name}`, this.config);
         const queueUrls = response.QueueUrls || [];
         queueUrls.forEach((queueUrl) => {
           const queueUrlSplits = queueUrl.split('/');
@@ -37,7 +57,7 @@ class SQS extends Service {
         });
       })
       .catch((err) => {
-        this.emitError('connection.ERROR', err, this.config);
+        this.error(err, this.config);
         throw err;
       });
   }
@@ -61,7 +81,7 @@ class SQS extends Service {
     if (this.queues[name]) {
       const queueUrl = this.queues[name];
       const message = `Queue ${name} exists => ${queueUrl}`;
-      this.emitInfo('queue.EXISTS', message, {
+      this.log(message, {
         name,
         queueUrl,
       });
@@ -80,10 +100,10 @@ class SQS extends Service {
         this.queues = Object.assign(this.queues, {
           [name]: queueUrl,
         });
-        this.emitInfo('queue.CREATED', message, { name, queueUrl });
+        this.log(message, { name, queueUrl });
       })
       .catch((err) => {
-        this.emitError('queue.ERROR', err, { name, options });
+        this.error(err, { name, options });
         throw err;
       });
   }
@@ -100,7 +120,7 @@ class SQS extends Service {
     const queueUrl = this.queues[name];
     if (!queueUrl) {
       const error = new Error(`Queue ${name} does not exists`);
-      this.emitError(error.type, error, error.cause);
+      this.error(error, error.cause);
       if (handle === false) {
         return Promise.reject(error);
       }
@@ -112,7 +132,7 @@ class SQS extends Service {
     return this.client.sendMessage(params).promise()
       .then((res) => res)
       .catch((err) => {
-        this.emitError('publish.ERROR', err, {
+        this.error(err, {
           queueName: name,
           content,
           meta,
@@ -128,7 +148,7 @@ class SQS extends Service {
     const queueUrl = this.queues[name];
     if (!queueUrl) {
       const error = new Error(`Queue ${name} does not exists`);
-      this.emitError(error.type, error, error.cause);
+      this.error(error, error.cause);
       return Promise.reject(error);
     }
     return queueUrl;
@@ -145,7 +165,7 @@ class SQS extends Service {
         queueUrl,
         handleMessage: (msg, done) => {
           cb({
-            data: misc.safeJSON(msg.Body),
+            data: safeJSON(msg.Body),
             ack: done,
             nack: (err) => {
               done(err || new Error('Unable to process message'));
@@ -162,16 +182,16 @@ class SQS extends Service {
       });
 
       sub.on('error', (err) => {
-        this.emitError('sub.ERROR', err, {
+        this.error(err, {
           queueName: name,
         });
       });
       sub.on('processing_error', (err) => {
-        this.emitError('sub.ERROR', err, {
+        this.error(err, {
           queueName: name,
         });
       });
-      this.emitSuccess(`Subscribed to ${queueUrl}`);
+      this.success(`Subscribed to ${queueUrl}`);
       sub.start();
       resolve(sub);
     });
@@ -209,7 +229,7 @@ class SQS extends Service {
     return this.client.receiveMessage(params).promise().then(res => {
       return res.Messages.map(msg => {
         return {
-          data: misc.safeJSON(msg.Body),
+          data: safeJSON(msg.Body),
           ack: () => {
             return this.deleteMessage(name, msg.MessageId, msg.ReceiptHandle);
           },
