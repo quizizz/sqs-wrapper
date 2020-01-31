@@ -167,7 +167,6 @@ class SQS {
       MessageGroupId: group.name,
       MessageDeduplicationId: group.id,
     };
-    console.log(params);
     return this.client.sendMessage(params).promise()
       .then((res) => res)
       .catch((err) => {
