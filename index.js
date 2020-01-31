@@ -112,12 +112,14 @@ class SQS {
   /**
    * Publish on SQS
    * @param  {string}  name
-   * @param  {*}       type
+   * @param  {Object}  content
    * @param  {Object}  meta={}
    * @param  {Boolean} handle=true  [Should the error be handled]
+   * @param  {Object}  [options={}]
+   * @param  {Number}  [options.delay]  [in seconds]
    * @return {Promise}
    */
-  publish(name, content, meta = {}, handle = true) {
+  publish(name, content, meta = {}, handle = true, options = {}) {
     const queueUrl = this.queues[name];
     if (!queueUrl) {
       const error = new Error(`Queue ${name} does not exists`);
@@ -130,6 +132,11 @@ class SQS {
       QueueUrl: this.queues[name],
       MessageBody: JSON.stringify({ content, meta }),
     };
+
+    if (typeof options.delay === 'number') {
+      params.DelaySeconds = options.delay;
+    }
+
     return this.client.sendMessage(params).promise()
       .then((res) => res)
       .catch((err) => {
