@@ -5,7 +5,7 @@
 const AWS = require('aws-sdk');
 const safeJSON = require('safely-parse-json');
 const Consumer = require('sqs-consumer');
-const uuid = require('uuid/v4');
+const { v4: uuid } = require('uuid');
 
 class SQS {
   constructor(name, emitter, config = {}) {
