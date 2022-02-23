@@ -5,7 +5,6 @@
 const AWS = require('aws-sdk');
 const safeJSON = require('safely-parse-json');
 const Consumer = require('sqs-consumer');
-const uuid = require('uuid/v4');
 
 class SQS {
   constructor(name, emitter, config = {}) {
@@ -40,10 +39,10 @@ class SQS {
     });
   }
 
-  init() {
+  async init() {
     this.client = new AWS.SQS(this.config);
     // try to list queues
-    return this.client.listQueues({
+    await this.client.listQueues({
       QueueNamePrefix: '',
     }).promise()
       .then((response) => {
@@ -61,6 +60,7 @@ class SQS {
         this.error(err, this.config);
         throw err;
       });
+    return this;
   }
 
   /**
@@ -187,7 +187,7 @@ class SQS {
     if (!queueUrl) {
       const error = new Error(`Queue ${name} does not exists`);
       this.error(error, error.cause);
-      return Promise.reject(error);
+      throw error;
     }
     return queueUrl;
   }

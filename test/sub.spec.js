@@ -1,7 +1,9 @@
+/* eslint no-console: 0 */
+
 
 const EventEmitter = require('events').EventEmitter;
 
-const SQS = require('../index');
+const SQS = require('../src/index');
 
 const emitter = new EventEmitter();
 emitter.on('error', console.error.bind(console));
