@@ -11,8 +11,8 @@ type CreateQueueOpts = {
   FifoQueue: 'false' | 'true',
 }
 
-type Content = Record<string, unkown>
-type Meta = Record<string, unkown>
+type Content = Record<string, unknown>
+type Meta = Record<string, unknown>
 type PublishOptions = {
   delay: number
 }

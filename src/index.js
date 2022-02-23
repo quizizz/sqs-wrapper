@@ -4,7 +4,7 @@
 
 const AWS = require('aws-sdk');
 const safeJSON = require('safely-parse-json');
-const Consumer = require('sqs-consumer');
+const { Consumer } = require('sqs-consumer');
 
 class SQS {
   constructor(name, emitter, config = {}) {
@@ -201,19 +201,22 @@ class SQS {
     return new Promise((resolve) => {
       const sub = Consumer.create({
         queueUrl,
-        handleMessage: (msg, done) => {
-          cb({
-            data: safeJSON(msg.Body),
-            ack: done,
-            nack: (err) => {
-              done(err || new Error('Unable to process message'));
-            },
-          }, {
-            id: msg.MessageId,
-            handle: msg.ReceiptHandle,
-            queueAttributes: msg.Attributes,
-            messageAttributes: msg.MessageAttributes,
+        handleMessage: (msg) => {
+          return new Promise((_resolve, reject) => {
+            cb({
+              data: safeJSON(msg.Body),
+              ack: _resolve,
+              nack: (err) => {
+                reject(err || new Error('Unable to process message'));
+              },
+            }, {
+              id: msg.MessageId,
+              handle: msg.ReceiptHandle,
+              queueAttributes: msg.Attributes,
+              messageAttributes: msg.MessageAttributes,
+            });
           });
+          
         },
         batchSize: opts.maxInProgress || 10,
         sqs: this.client,

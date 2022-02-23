@@ -9,6 +9,9 @@ const emitter = new EventEmitter();
 emitter.on('error', console.error.bind(console));
 emitter.on('log', console.log.bind(console));
 emitter.on('success', console.log.bind(console));
+process.on('unhandledRejection', console.log);
+process.on('uncaughtException', console.log);
+process.on('uncaughtExceptionMonitor', console.log);
 
 const sqs = new SQS('sqs', emitter);
 
@@ -19,7 +22,7 @@ async function sub() {
   });
 
   await sqs.subscribe('test.fifo', (msg) => {
-    console.log(msg.data);
+    console.log(msg);
     setTimeout(() => {
       msg.ack();
     }, 1000);
