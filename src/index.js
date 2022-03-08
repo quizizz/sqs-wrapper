@@ -4,8 +4,7 @@
 
 const AWS = require('aws-sdk');
 const safeJSON = require('safely-parse-json');
-const Consumer = require('sqs-consumer');
-const uuid = require('uuid/v4');
+const { Consumer } = require('sqs-consumer');
 
 class SQS {
   constructor(name, emitter, config = {}) {
@@ -40,10 +39,10 @@ class SQS {
     });
   }
 
-  init() {
+  async init() {
     this.client = new AWS.SQS(this.config);
     // try to list queues
-    return this.client.listQueues({
+    await this.client.listQueues({
       QueueNamePrefix: '',
     }).promise()
       .then((response) => {
@@ -61,6 +60,7 @@ class SQS {
         this.error(err, this.config);
         throw err;
       });
+    return this;
   }
 
   /**
@@ -187,7 +187,7 @@ class SQS {
     if (!queueUrl) {
       const error = new Error(`Queue ${name} does not exists`);
       this.error(error, error.cause);
-      return Promise.reject(error);
+      throw error;
     }
     return queueUrl;
   }
@@ -201,19 +201,22 @@ class SQS {
     return new Promise((resolve) => {
       const sub = Consumer.create({
         queueUrl,
-        handleMessage: (msg, done) => {
-          cb({
-            data: safeJSON(msg.Body),
-            ack: done,
-            nack: (err) => {
-              done(err || new Error('Unable to process message'));
-            },
-          }, {
-            id: msg.MessageId,
-            handle: msg.ReceiptHandle,
-            queueAttributes: msg.Attributes,
-            messageAttributes: msg.MessageAttributes,
+        handleMessage: (msg) => {
+          return new Promise((_resolve, reject) => {
+            cb({
+              data: safeJSON(msg.Body),
+              ack: _resolve,
+              nack: (err) => {
+                reject(err || new Error('Unable to process message'));
+              },
+            }, {
+              id: msg.MessageId,
+              handle: msg.ReceiptHandle,
+              queueAttributes: msg.Attributes,
+              messageAttributes: msg.MessageAttributes,
+            });
           });
+          
         },
         batchSize: opts.maxInProgress || 10,
         sqs: this.client,

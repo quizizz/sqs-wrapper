@@ -1,6 +1,8 @@
+/* eslint no-console: 0 */
+
 const EventEmitter = require('events').EventEmitter;
-const uuid = require('uuid/v4');
-const SQS = require('../index');
+const { v4: uuidv4 } = require('uuid');
+const SQS = require('../src/index');
 
 const emitter = new EventEmitter();
 emitter.on('error', console.error.bind(console));
@@ -12,7 +14,7 @@ const sqs = new SQS('sqs', emitter);
 function getGroup() {
   return {
     name: 'testing',
-    id: uuid(),
+    id: uuidv4(),
   };
 }
 
@@ -34,5 +36,5 @@ async function push() {
   await sqs.publishFifo('test.fifo', { message: 'seven' }, {}, getGroup());
 }
 
-push().then(() => console.log('Pusblish')).catch(console.error.bind(console));
+push().then(() => console.log('Published')).catch(console.error.bind(console));
 
