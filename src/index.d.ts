@@ -37,7 +37,7 @@ type SubscribeOptions = {
 export default class SQS {
   constructor(name: string, emitter: any, config: AWSConfig);
   init(): Promise<SQS>;
-  createQueue(queueName: string, opts: CreateQueueOpts): Promise<void>;
+  createQueue(queueName: string, opts?: CreateQueueOpts): Promise<void>;
   publish(
     queueName: string,
     content: Content,
