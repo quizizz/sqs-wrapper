@@ -1,7 +1,7 @@
 
 type AWSConfig = {
   region?: string,
-};
+}
 
 type CreateQueueOpts = {
   DelaySeconds: number,
@@ -20,8 +20,9 @@ type PublishOptions = {
 type Message = {
   data: Record<string, unknown>;
   ack: () => {},
-  nack: (err) => {},
-};
+  nack: (err: Error) => {},
+}
+
 type Metadata = {
   id: string;
   handle: string;
@@ -33,7 +34,6 @@ type SubscribeCallback = (message: Message, metadata: Metadata) => void
 type SubscribeOptions = {
   maxInProgress: number;
 }
-
 export default class SQS {
   constructor(name: string, emitter: any, config: AWSConfig);
   init(): Promise<SQS>;
@@ -58,4 +58,4 @@ export default class SQS {
   returnMessage(queueName: string, messageId: string, handle: string): Promise<void>;
   fetchMessages(queueName: string, number?: number): Promise<Message[]>;
   fetchOne(queueName: string): Promise<Message>;
-};
+}
