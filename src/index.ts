@@ -14,7 +14,7 @@ import {
   DeleteMessageRequest,
   SendMessageBatchRequest,
 } from "@aws-sdk/client-sqs";
-import uuid from "uuid";
+import { v4 as uuidv4 } from "uuid";
 
 export default class SQS {
   private name: string;
@@ -218,7 +218,7 @@ export default class SQS {
     const params: SendMessageBatchRequest = {
       QueueUrl: this.queues[name],
       Entries: contentList.map((content) => ({
-        Id: uuid.v4(),
+        Id: uuidv4(),
         MessageBody: JSON.stringify({ content, meta }),
         DelaySeconds,
       })),
