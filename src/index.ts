@@ -60,29 +60,44 @@ export default class SQS {
     });
   }
 
-  async init(): Promise<SQS> {
-    this.client = new AWS.SQS(this.config);
-    // try to list queues
+  processQueueUrls(queueUrls: string[]): void {
+    queueUrls.forEach((queueUrl: string) => {
+      const queueUrlSplits = queueUrl.split('/');
+      const queueName = queueUrlSplits[queueUrlSplits.length - 1];
+      this.queues = { ...this.queues, [queueName]: queueUrl };
+    });
+  }
+
+  async listQueuesRecursively(queueNamePrefix: string, nextToken?: string): Promise<void> {
     try {
-      const response = await this.client
-        .listQueues({
-          QueueNamePrefix: "",
-        })
-        .promise();
-      this.log(`Connected on SQS:${this.name}`, this.config);
-      const queueUrls = response.QueueUrls || [];
-      queueUrls.forEach((queueUrl) => {
-        const queueUrlSplits = queueUrl.split("/");
-        const queueName = queueUrlSplits[queueUrlSplits.length - 1];
-        this.queues = Object.assign(this.queues, {
-          [queueName]: queueUrl,
-        });
-      });
-    } catch (err) {
+      const response: any = await this.client.listQueues({
+        QueueNamePrefix: queueNamePrefix,
+        NextToken: nextToken
+      }).promise();
+
+      const queueUrls: string[] = response.QueueUrls || [];
+      this.processQueueUrls(queueUrls);
+
+      if (response.NextToken) {
+        await this.listQueuesRecursively(queueNamePrefix, response.NextToken);
+      }
+    } catch (err: any) {
       this.error(err, this.config);
       throw err;
     }
-    return this;
+  }
+
+  async init(queueNamePrefix?: string): Promise<SQS> {
+    try {
+      this.client = new AWS.SQS(this.config);
+      await this.listQueuesRecursively(queueNamePrefix);
+      this.log(`Connected on SQS:${this.name}`, this.config);
+      console.log('queues: ', this.queues);
+      return this;
+    } catch (err: any) {
+      this.error(err, this.config);
+      throw err;
+    }
   }
 
   /**
