@@ -92,7 +92,6 @@ export default class SQS {
       this.client = new AWS.SQS(this.config);
       await this.listQueuesRecursively(queueNamePrefix);
       this.log(`Connected on SQS:${this.name}`, this.config);
-      console.log('queues: ', this.queues);
       return this;
     } catch (err: any) {
       this.error(err, this.config);
