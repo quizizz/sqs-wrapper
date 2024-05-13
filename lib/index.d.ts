@@ -13,8 +13,8 @@ export default class SQS {
     log(message: string, data?: Record<string, any>): void;
     success(message: string, data?: Record<string, any>): void;
     error(err: Error, data?: Record<string, any>): void;
-    processQueueUrls(queueUrls: string[]): void;
-    listQueuesRecursively(queueNamePrefix: string, nextToken?: string): Promise<void>;
+    private processQueueUrls;
+    private listQueuesRecursively;
     init(queueNamePrefix?: string): Promise<SQS>;
     /**
      * Create a new queue

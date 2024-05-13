@@ -60,7 +60,7 @@ export default class SQS {
     });
   }
 
-  processQueueUrls(queueUrls: string[]): void {
+  private processQueueUrls(queueUrls: string[]): void {
     queueUrls.forEach((queueUrl: string) => {
       const queueUrlSplits = queueUrl.split('/');
       const queueName = queueUrlSplits[queueUrlSplits.length - 1];
@@ -68,7 +68,7 @@ export default class SQS {
     });
   }
 
-  async listQueuesRecursively(queueNamePrefix: string, nextToken?: string): Promise<void> {
+  private async listQueuesRecursively(queueNamePrefix: string, nextToken?: string): Promise<void> {
     try {
       const response: any = await this.client.listQueues({
         QueueNamePrefix: queueNamePrefix,
