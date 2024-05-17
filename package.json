@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "safely-parse-json": "0.1.0",
-    "sqs-consumer": "7.2.0",
+    "sqs-consumer": "5.8.0",
     "uuid": "^9.0.0"
   },
   "peerDependencies": {
