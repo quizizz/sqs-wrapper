@@ -61,6 +61,7 @@ export default class SQS {
   }
 
   private processQueueUrls(queueUrls: string[]): void {
+    console.log('all queues: ', queueUrls.length);
     queueUrls.forEach((queueUrl: string) => {
       const queueUrlSplits = queueUrl.split('/');
       const queueName = queueUrlSplits[queueUrlSplits.length - 1];
@@ -72,7 +73,8 @@ export default class SQS {
     try {
       const response: any = await this.client.listQueues({
         QueueNamePrefix: queueNamePrefix,
-        NextToken: nextToken
+        NextToken: nextToken,
+        MaxResults: 100,
       }).promise();
 
       const queueUrls: string[] = response.QueueUrls || [];
