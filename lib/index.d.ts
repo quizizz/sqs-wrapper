@@ -1,15 +1,22 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import AWS, { AWSError } from "aws-sdk";
 import EventEmitter from "events";
 import { QueueAttributeMap, SendMessageBatchResult, SendMessageResult } from "aws-sdk/clients/sqs";
 import { PromiseResult } from "aws-sdk/lib/request";
+import { Agent } from 'https';
+interface Config {
+    httpOptions?: {
+        agent: Agent;
+    };
+}
 export default class SQS {
     private name;
     private emitter;
     private config;
     private client;
     private queues;
-    constructor(name: string, emitter: EventEmitter, config?: {});
+    constructor(name: string, emitter: EventEmitter, config?: Config);
     log(message: string, data?: Record<string, any>): void;
     success(message: string, data?: Record<string, any>): void;
     error(err: Error, data?: Record<string, any>): void;
@@ -81,3 +88,4 @@ export default class SQS {
     })[][]>;
     fetchOne(name: string): Promise<any>;
 }
+export {};
