@@ -17,12 +17,6 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { Agent } from 'https';
 
-interface Config {
-  httpOptions?: {
-    agent: Agent;
-  };
-}
-
 export default class SQS {
   private name: string;
   private emitter: EventEmitter;
@@ -30,7 +24,7 @@ export default class SQS {
   private client: AWS.SQS;
   private queues: Record<string, string>;
 
-  constructor(name: string, emitter: EventEmitter, config: Config = {}) {
+  constructor(name: string, emitter: EventEmitter, config: Record<string, any> = {}) {
     this.name = name;
     this.emitter = emitter;
     if (!config.httpOptions) {
