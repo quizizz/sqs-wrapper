@@ -15,6 +15,7 @@ import {
   SendMessageBatchRequest,
 } from "@aws-sdk/client-sqs";
 import { v4 as uuidv4 } from "uuid";
+import { Agent } from 'https';
 
 export default class SQS {
   private name: string;
@@ -23,9 +24,16 @@ export default class SQS {
   private client: AWS.SQS;
   private queues: Record<string, string>;
 
-  constructor(name: string, emitter: EventEmitter, config = {}) {
+  constructor(name: string, emitter: EventEmitter, config: Record<string, any> = {}) {
     this.name = name;
     this.emitter = emitter;
+    if (!config.httpOptions) {
+      config.httpOptions = {
+        agent: new Agent({
+          keepAlive: true,
+        }),
+      };
+    }
     this.config = Object.assign(
       {
         region: "us-east-1",

@@ -9,7 +9,7 @@ export default class SQS {
     private config;
     private client;
     private queues;
-    constructor(name: string, emitter: EventEmitter, config?: {});
+    constructor(name: string, emitter: EventEmitter, config?: Record<string, any>);
     log(message: string, data?: Record<string, any>): void;
     success(message: string, data?: Record<string, any>): void;
     error(err: Error, data?: Record<string, any>): void;
