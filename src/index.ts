@@ -81,6 +81,7 @@ export default class SQS {
       const response: any = await this.client.listQueues({
         QueueNamePrefix: queueNamePrefix,
         NextToken: nextToken,
+        MaxResults: 500,
       }).promise();
 
       const queueUrls: string[] = response.QueueUrls || [];
