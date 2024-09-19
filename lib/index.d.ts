@@ -13,9 +13,7 @@ export default class SQS {
     log(message: string, data?: Record<string, any>): void;
     success(message: string, data?: Record<string, any>): void;
     error(err: Error, data?: Record<string, any>): void;
-    private processQueueUrls;
-    private listQueuesRecursively;
-    init(queueNamePrefix?: string): Promise<SQS>;
+    init(region?: string, accountId?: string): Promise<SQS>;
     /**
      * Create a new queue
      * @param  {String} name

@@ -35,13 +35,14 @@ export default class SQS {
       };
     }
     this.config = Object.assign(
+      // TODO: Read from configuration
       {
         region: "us-east-1",
+        accountId: '399771530480',
       },
       config
     );
     this.client = null;
-    this.queues = {};
   }
 
   log(message: string, data?: Record<string, any>) {
@@ -68,38 +69,10 @@ export default class SQS {
     });
   }
 
-  private processQueueUrls(queueUrls: string[]): void {
-    queueUrls.forEach((queueUrl: string) => {
-      const queueUrlSplits = queueUrl.split('/');
-      const queueName = queueUrlSplits[queueUrlSplits.length - 1];
-      this.queues = { ...this.queues, [queueName]: queueUrl };
-    });
-  }
-
-  private async listQueuesRecursively(queueNamePrefix: string, nextToken?: string): Promise<void> {
+  async init(region?: string, accountId?: string): Promise<SQS> {
     try {
-      const response: any = await this.client.listQueues({
-        QueueNamePrefix: queueNamePrefix,
-        NextToken: nextToken,
-        MaxResults: 500,
-      }).promise();
-
-      const queueUrls: string[] = response.QueueUrls || [];
-      this.processQueueUrls(queueUrls);
-
-      if (response.NextToken) {
-        await this.listQueuesRecursively(queueNamePrefix, response.NextToken);
-      }
-    } catch (err: any) {
-      this.error(err, this.config);
-      throw err;
-    }
-  }
-
-  async init(queueNamePrefix?: string): Promise<SQS> {
-    try {
+      // TODO: Assign region or accountId in config if coming
       this.client = new AWS.SQS(this.config);
-      await this.listQueuesRecursively(queueNamePrefix);
       this.log(`Connected on SQS:${this.name}`, this.config);
       return this;
     } catch (err: any) {
@@ -124,15 +97,6 @@ export default class SQS {
    * @return {Promise}
    */
   async createQueue(name: string, opts: QueueAttributeMap = {}): Promise<void> {
-    if (this.queues[name]) {
-      const queueUrl = this.queues[name];
-      const message = `Queue ${name} exists => ${queueUrl}`;
-      this.log(message, {
-        name,
-        queueUrl,
-      });
-      return Promise.resolve();
-    }
     const options = Object.assign(
       {
         // FifoQueue: 'false', // use standard by default
@@ -148,11 +112,9 @@ export default class SQS {
         .promise();
       const queueUrl = response.QueueUrl;
       const message = `Created queue ${name} => ${queueUrl}`;
-      this.queues = Object.assign(this.queues, {
-        [name]: queueUrl,
-      });
       this.log(message, { name, queueUrl });
     } catch (err) {
+      console.log('error creating the queue: ', err);
       this.error(err, { name, options });
       throw err;
     }
@@ -175,16 +137,8 @@ export default class SQS {
     handle: boolean = true,
     options: Record<string, any> = {}
   ): Promise<PromiseResult<SendMessageResult, AWSError>> {
-    const queueUrl = this.queues[name];
-    if (!queueUrl) {
-      const error = new Error(`Queue ${name} does not exists`);
-      this.error(error, error.cause);
-      if (handle === false) {
-        return Promise.reject(error);
-      }
-    }
     const params: SendMessageRequest = {
-      QueueUrl: this.queues[name],
+      QueueUrl: this.getQueueUrl(name),
       MessageBody: JSON.stringify({ content, meta }),
     };
 
@@ -225,21 +179,13 @@ export default class SQS {
     handle: boolean = true,
     options: Record<string, any> = {}
   ): Promise<PromiseResult<SendMessageBatchResult, AWSError>> {
-    const queueUrl = this.queues[name];
-    if (!queueUrl) {
-      const error = new Error(`Queue ${name} does not exists`);
-      this.error(error, error.cause);
-      if (handle === false) {
-        return Promise.reject(error);
-      }
-    }
     let DelaySeconds: number | undefined;
     if (typeof options.delay === "number") {
       DelaySeconds = options.delay;
     }
 
     const params: SendMessageBatchRequest = {
-      QueueUrl: this.queues[name],
+      QueueUrl: this.getQueueUrl(name),
       Entries: contentList.map((content) => ({
         Id: uuidv4(),
         MessageBody: JSON.stringify({ content, meta }),
@@ -270,16 +216,8 @@ export default class SQS {
     group: Record<string, any>,
     handle: boolean = true
   ): Promise<PromiseResult<SendMessageResult, AWSError>> {
-    const queueUrl = this.queues[name];
-    if (!queueUrl) {
-      const error = new Error(`Queue ${name} does not exists`);
-      this.error(error, error.cause);
-      if (handle === false) {
-        return Promise.reject(error);
-      }
-    }
     const params: SendMessageRequest = {
-      QueueUrl: this.queues[name],
+      QueueUrl: this.getQueueUrl(name),
       MessageBody: JSON.stringify({ content, meta }),
       MessageGroupId: group.name,
       MessageDeduplicationId: group.id,
@@ -301,13 +239,7 @@ export default class SQS {
   }
 
   getQueueUrl(name: string): string {
-    const queueUrl = this.queues[name];
-    if (!queueUrl) {
-      const error = new Error(`Queue ${name} does not exists`);
-      this.error(error, error.cause);
-      throw error;
-    }
-    return queueUrl;
+    return `https://sqs.${this.config.region}.amazonaws.com/${this.config.accountId}/${name}`;
   }
 
   /**
