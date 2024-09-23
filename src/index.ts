@@ -35,7 +35,6 @@ export default class SQS {
       };
     }
     this.config = Object.assign(
-      // TODO: Read from configuration
       {
         region: "us-east-1",
         accountId: '399771530480',
@@ -69,9 +68,21 @@ export default class SQS {
     });
   }
 
+  /**
+   * Initializes the SQS client with the provided region and account ID.
+   * 
+   * @param {string} [region] - The AWS region to set for the SQS client.
+   * @param {string} [accountId] - The AWS account ID to set for the SQS client.
+   * @returns {Promise<SQS>} A promise that resolves to the initialized SQS client.
+   * @throws Will throw an error if the initialization fails.
+   */
   async init(region?: string, accountId?: string): Promise<SQS> {
     try {
-      // TODO: Assign region or accountId in config if coming
+      this.config = {
+        ...this.config,
+        ...(region && { region }),
+        ...(accountId && { accountId })
+      };
       this.client = new AWS.SQS(this.config);
       this.log(`Connected on SQS:${this.name}`, this.config);
       return this;
