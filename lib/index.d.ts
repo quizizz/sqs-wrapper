@@ -13,9 +13,15 @@ export default class SQS {
     log(message: string, data?: Record<string, any>): void;
     success(message: string, data?: Record<string, any>): void;
     error(err: Error, data?: Record<string, any>): void;
-    private processQueueUrls;
-    private listQueuesRecursively;
-    init(queueNamePrefix?: string): Promise<SQS>;
+    /**
+     * Initializes the SQS client with the provided region and account ID.
+     *
+     * @param {string} [region] - The AWS region to set for the SQS client.
+     * @param {string} [accountId] - The AWS account ID to set for the SQS client.
+     * @returns {Promise<SQS>} A promise that resolves to the initialized SQS client.
+     * @throws Will throw an error if the initialization fails.
+     */
+    init(region?: string, accountId?: string): Promise<SQS>;
     /**
      * Create a new queue
      * @param  {String} name
