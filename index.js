@@ -120,6 +120,10 @@ class SQS {
    * @return {Promise}
    */
   publish(name, content, meta = {}, handle = true, options = {}) {
+    this.publishFlattened(name, { content }, meta, handle, options);
+  }
+
+  publishFlattened(name, content, meta = {}, handle = true, options = {}) {
     const queueUrl = this.queues[name];
     if (!queueUrl) {
       const error = new Error(`Queue ${name} does not exists`);
@@ -130,7 +134,7 @@ class SQS {
     }
     const params = {
       QueueUrl: this.queues[name],
-      MessageBody: JSON.stringify({ content, meta }),
+      MessageBody: JSON.stringify({ ...content, meta }),
     };
 
     if (typeof options.delay === 'number') {
