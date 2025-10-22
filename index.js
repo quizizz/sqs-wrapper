@@ -134,7 +134,7 @@ class SQS {
     }
     const params = {
       QueueUrl: this.queues[name],
-      MessageBody: JSON.stringify({ ...content, meta }),
+      MessageBody: JSON.stringify({ ...content, meta: meta }),
     };
 
     if (typeof options.delay === 'number') {
