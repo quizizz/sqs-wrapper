@@ -120,7 +120,7 @@ class SQS {
    * @return {Promise}
    */
   publish(name, content, meta = {}, handle = true, options = {}) {
-    this.publishFlattened(name, { content }, meta, handle, options);
+    return this.publishFlattened(name, { content }, meta, handle, options);
   }
 
   publishFlattened(name, content, meta = {}, handle = true, options = {}) {
