@@ -1,6 +1,6 @@
 {
   "name": "@quizizz/sqs",
-  "version": "0.1.3",
+  "version": "v1.0.3",
   "description": "A simple wrapper for aws sqs",
   "main": "index.js",
   "scripts": {
