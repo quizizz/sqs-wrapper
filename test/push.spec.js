@@ -1,5 +1,5 @@
 const EventEmitter = require('events').EventEmitter;
-const uuid = require('uuid/v4');
+const { v4: uuid } = require('uuid');
 const SQS = require('../index');
 
 const emitter = new EventEmitter();

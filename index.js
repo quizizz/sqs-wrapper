@@ -2,10 +2,17 @@
  * Send to AWS sqs
  */
 
-const AWS = require('aws-sdk');
+const {
+  SQSClient,
+  ListQueuesCommand,
+  CreateQueueCommand,
+  SendMessageCommand,
+  DeleteMessageCommand,
+  ChangeMessageVisibilityCommand,
+  ReceiveMessageCommand,
+} = require('@aws-sdk/client-sqs');
 const safeJSON = require('safely-parse-json');
-const Consumer = require('sqs-consumer');
-const uuid = require('uuid/v4');
+const { Consumer } = require('sqs-consumer');
 
 class SQS {
   constructor(name, emitter, config = {}) {
@@ -41,11 +48,12 @@ class SQS {
   }
 
   init() {
-    this.client = new AWS.SQS(this.config);
+    this.client = new SQSClient(this.config);
     // try to list queues
-    return this.client.listQueues({
+    const command = new ListQueuesCommand({
       QueueNamePrefix: '',
-    }).promise()
+    });
+    return this.client.send(command)
       .then((response) => {
         this.log(`Connected on SQS:${this.name}`, this.config);
         const queueUrls = response.QueueUrls || [];
@@ -91,10 +99,11 @@ class SQS {
     const options = Object.assign({
       // FifoQueue: 'false', // use standard by default
     }, opts);
-    return this.client.createQueue({
+    const command = new CreateQueueCommand({
       QueueName: name,
       Attributes: options,
-    }).promise()
+    });
+    return this.client.send(command)
       .then((response) => {
         const queueUrl = response.QueueUrl;
         const message = `Created queue ${name} => ${queueUrl}`;
@@ -137,7 +146,8 @@ class SQS {
       params.DelaySeconds = options.delay;
     }
 
-    return this.client.sendMessage(params).promise()
+    const command = new SendMessageCommand(params);
+    return this.client.send(command)
       .then((res) => res)
       .catch((err) => {
         this.error(err, {
@@ -167,7 +177,8 @@ class SQS {
       MessageGroupId: group.name,
       MessageDeduplicationId: group.id,
     };
-    return this.client.sendMessage(params).promise()
+    const command = new SendMessageCommand(params);
+    return this.client.send(command)
       .then((res) => res)
       .catch((err) => {
         this.error(err, {
@@ -201,18 +212,20 @@ class SQS {
     return new Promise((resolve) => {
       const sub = Consumer.create({
         queueUrl,
-        handleMessage: (msg, done) => {
-          cb({
-            data: safeJSON(msg.Body),
-            ack: done,
-            nack: (err) => {
-              done(err || new Error('Unable to process message'));
-            },
-          }, {
-            id: msg.MessageId,
-            handle: msg.ReceiptHandle,
-            queueAttributes: msg.Attributes,
-            messageAttributes: msg.MessageAttributes,
+        handleMessage: async (msg) => {
+          return new Promise((msgResolve, msgReject) => {
+            cb({
+              data: safeJSON(msg.Body),
+              ack: msgResolve,
+              nack: (err) => {
+                msgReject(err || new Error('Unable to process message'));
+              },
+            }, {
+              id: msg.MessageId,
+              handle: msg.ReceiptHandle,
+              queueAttributes: msg.Attributes,
+              messageAttributes: msg.MessageAttributes,
+            });
           });
         },
         batchSize: opts.maxInProgress || 10,
@@ -243,7 +256,8 @@ class SQS {
       ReceiptHandle: handle,
     };
 
-    return this.client.deleteMessage(params).promise();
+    const command = new DeleteMessageCommand(params);
+    return this.client.send(command);
   }
 
 
@@ -254,7 +268,8 @@ class SQS {
       ReceiptHandle: handle,
       VisibilityTimeout: 0,
     };
-    return this.client.changeMessageVisibility(params).promise();
+    const command = new ChangeMessageVisibilityCommand(params);
+    return this.client.send(command);
   }
 
 
@@ -264,7 +279,8 @@ class SQS {
       QueueUrl: queueUrl,
       MaxNumberOfMessages: number,
     };
-    return this.client.receiveMessage(params).promise().then(res => {
+    const command = new ReceiveMessageCommand(params);
+    return this.client.send(command).then(res => {
       return res.Messages.map(msg => {
         return {
           data: safeJSON(msg.Body),
