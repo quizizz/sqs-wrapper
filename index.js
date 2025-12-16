@@ -1,3 +1,4 @@
+
 /**
  * Send to AWS sqs
  */
@@ -281,20 +282,20 @@ class SQS {
     };
     const command = new ReceiveMessageCommand(params);
     return this.client.send(command).then(res => {
-      return res.Messages.map(msg => {
+      const messages = res.Messages || [];
+      return messages.map(msg => {
         return {
           data: safeJSON(msg.Body),
+          id: msg.MessageId,
+          handle: msg.ReceiptHandle,
+          queueAttributes: msg.Attributes,
+          messageAttributes: msg.MessageAttributes,
           ack: () => {
             return this.deleteMessage(name, msg.MessageId, msg.ReceiptHandle);
           },
           nack: () => {
             return this.returnMessage(name, msg.MessageId, msg.ReceiptHandle);
           },
-        }, {
-          id: msg.MessageId,
-          handle: msg.ReceiptHandle,
-          queueAttributes: msg.Attributes,
-          messageAttributes: msg.MessageAttributes,
         };
       });
     });

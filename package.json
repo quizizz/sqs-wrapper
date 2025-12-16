@@ -4,7 +4,7 @@
   "description": "A simple wrapper for aws sqs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "AWS_ENDPOINT_URL=http://localhost:4566 node test/*.js "
   },
   "repository": {
     "type": "git",
