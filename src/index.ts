@@ -6,13 +6,12 @@ import {
   DeleteMessageCommand,
   ChangeMessageVisibilityCommand,
   ReceiveMessageCommand,
-  SendMessageBatchResult,
+  SendMessageBatchCommandOutput,
   SendMessageRequest,
-  SendMessageResult,
+  SendMessageCommandOutput,
   ChangeMessageVisibilityRequest,
   DeleteMessageRequest,
   SendMessageBatchRequest,
-  CreateQueueCommandInput,
 } from "@aws-sdk/client-sqs";
 import safeJSON from "safely-parse-json";
 import { Consumer } from "sqs-consumer";
@@ -149,7 +148,7 @@ export default class SQS {
     meta: Record<string, any> = {},
     handle: boolean = true,
     options: Record<string, any> = {}
-  ): Promise<SendMessageResult> {
+  ): Promise<SendMessageCommandOutput | undefined> {
     const params: SendMessageRequest = {
       QueueUrl: this.getQueueUrl(name),
       MessageBody: JSON.stringify({ content, meta }),
@@ -192,7 +191,7 @@ export default class SQS {
     meta: Record<string, any> = {},
     handle: boolean = true,
     options: Record<string, any> = {}
-  ): Promise<SendMessageBatchResult> {
+  ): Promise<SendMessageBatchCommandOutput | undefined> {
     let DelaySeconds: number | undefined;
     if (typeof options.delay === "number") {
       DelaySeconds = options.delay;
@@ -230,7 +229,7 @@ export default class SQS {
     meta: Record<string, any> = {},
     group: Record<string, any>,
     handle: boolean = true
-  ): Promise<SendMessageResult> {
+  ): Promise<SendMessageCommandOutput | undefined> {
     const params: SendMessageRequest = {
       QueueUrl: this.getQueueUrl(name),
       MessageBody: JSON.stringify({ content, meta }),

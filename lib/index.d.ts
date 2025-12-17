@@ -1,4 +1,4 @@
-import { SendMessageBatchResult, SendMessageResult } from "@aws-sdk/client-sqs";
+import { SendMessageBatchCommandOutput, SendMessageCommandOutput } from "@aws-sdk/client-sqs";
 import { EventEmitter } from "events";
 export default class SQS {
     private name;
@@ -45,7 +45,7 @@ export default class SQS {
      * @param  {Number}  [options.delay]  [in seconds]
      * @return {Promise}
      */
-    publish(name: string, content: Record<string, any>, meta?: Record<string, any>, handle?: boolean, options?: Record<string, any>): Promise<SendMessageResult>;
+    publish(name: string, content: Record<string, any>, meta?: Record<string, any>, handle?: boolean, options?: Record<string, any>): Promise<SendMessageCommandOutput | undefined>;
     /**
      * Publish on SQS in batch
      * @param  {string}  name
@@ -56,8 +56,8 @@ export default class SQS {
      * @param  {Number}  [options.delay]  [in seconds]
      * @return {Promise}
      */
-    publishBatch(name: string, contentList: Record<string, any>[], meta?: Record<string, any>, handle?: boolean, options?: Record<string, any>): Promise<SendMessageBatchResult>;
-    publishFifo(name: string, content: Record<string, any>, meta: Record<string, any>, group: Record<string, any>, handle?: boolean): Promise<SendMessageResult>;
+    publishBatch(name: string, contentList: Record<string, any>[], meta?: Record<string, any>, handle?: boolean, options?: Record<string, any>): Promise<SendMessageBatchCommandOutput | undefined>;
+    publishFifo(name: string, content: Record<string, any>, meta: Record<string, any>, group: Record<string, any>, handle?: boolean): Promise<SendMessageCommandOutput | undefined>;
     getQueueUrl(name: string): string;
     /**
      * Subscribe to a queue, using long polling
