@@ -148,7 +148,7 @@ export default class SQS {
     meta: Record<string, any> = {},
     handle: boolean = true,
     options: Record<string, any> = {}
-  ): Promise<SendMessageCommandOutput | undefined> {
+  ): Promise<SendMessageCommandOutput> {
     const params: SendMessageRequest = {
       QueueUrl: this.getQueueUrl(name),
       MessageBody: JSON.stringify({ content, meta }),
@@ -172,6 +172,8 @@ export default class SQS {
       if (handle === false) {
         throw err;
       }
+      // Return empty response when error is handled
+      return {} as SendMessageCommandOutput;
     }
   }
 
@@ -191,7 +193,7 @@ export default class SQS {
     meta: Record<string, any> = {},
     handle: boolean = true,
     options: Record<string, any> = {}
-  ): Promise<SendMessageBatchCommandOutput | undefined> {
+  ): Promise<SendMessageBatchCommandOutput> {
     let DelaySeconds: number | undefined;
     if (typeof options.delay === "number") {
       DelaySeconds = options.delay;
@@ -220,6 +222,8 @@ export default class SQS {
       if (handle === false) {
         throw err;
       }
+      // Return empty response when error is handled
+      return { Successful: [], Failed: [] } as SendMessageBatchCommandOutput;
     }
   }
 
@@ -229,7 +233,7 @@ export default class SQS {
     meta: Record<string, any> = {},
     group: Record<string, any>,
     handle: boolean = true
-  ): Promise<SendMessageCommandOutput | undefined> {
+  ): Promise<SendMessageCommandOutput> {
     const params: SendMessageRequest = {
       QueueUrl: this.getQueueUrl(name),
       MessageBody: JSON.stringify({ content, meta }),
@@ -250,6 +254,8 @@ export default class SQS {
       if (handle === false) {
         throw err;
       }
+      // Return empty response when error is handled
+      return {} as SendMessageCommandOutput;
     }
   }
 
