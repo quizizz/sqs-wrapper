@@ -1,9 +1,7 @@
 /* eslint no-console: 0 */
 
-
 const EventEmitter = require('events').EventEmitter;
-
-const SQS = require('../src/index');
+const SQS = require('../lib/index').default;
 
 const emitter = new EventEmitter();
 emitter.on('error', console.error.bind(console));
@@ -15,21 +13,26 @@ process.on('uncaughtExceptionMonitor', console.log);
 
 const sqs = new SQS('sqs', emitter);
 
-async function sub() {
+async function fetch() {
   await sqs.init();
   await sqs.createQueue('test.fifo', {
     FifoQueue: 'true',
   });
 
-  await sqs.subscribe('test.fifo', (msg) => {
-    console.log(msg);
-    setTimeout(() => {
-      msg.ack();
-    }, 1000);
-  }, {
-    maxInProgress: 2,
-  });
+  // Fetch messages from the queue
+  const messages = await sqs.fetchMessages('test.fifo', 5);
+  console.log(`Fetched ${messages.length} messages`);
+  
+  // Process each message
+  for (const msg of messages) {
+    console.log('Message:', msg.data);
+    console.log('Message ID:', msg.id);
+    
+    // Acknowledge the message after processing
+    await msg.ack();
+    console.log('Message acknowledged');
+  }
 }
 
-sub().then(() => console.log('Subsciption')).catch(console.error.bind(console));
+fetch().then(() => console.log('Fetch completed')).catch(console.error.bind(console));
 
