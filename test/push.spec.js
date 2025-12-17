@@ -2,7 +2,7 @@
 
 const EventEmitter = require('events').EventEmitter;
 const { v4: uuidv4 } = require('uuid');
-const SQS = require('../src/index');
+const SQS = require('../lib/index').default;
 
 const emitter = new EventEmitter();
 emitter.on('error', console.error.bind(console));

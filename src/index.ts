@@ -1,19 +1,22 @@
-import AWS, { AWSError } from "aws-sdk";
-import safeJSON from "safely-parse-json";
-import { Consumer } from "sqs-consumer";
-import EventEmitter from "events";
 import {
-  QueueAttributeMap,
+  SQSClient,
+  CreateQueueCommand,
+  SendMessageCommand,
+  SendMessageBatchCommand,
+  DeleteMessageCommand,
+  ChangeMessageVisibilityCommand,
+  ReceiveMessageCommand,
   SendMessageBatchResult,
   SendMessageRequest,
   SendMessageResult,
-} from "aws-sdk/clients/sqs";
-import { PromiseResult } from "aws-sdk/lib/request";
-import {
   ChangeMessageVisibilityRequest,
   DeleteMessageRequest,
   SendMessageBatchRequest,
+  CreateQueueCommandInput,
 } from "@aws-sdk/client-sqs";
+import safeJSON from "safely-parse-json";
+import { Consumer } from "sqs-consumer";
+import { EventEmitter } from "events";
 import { v4 as uuidv4 } from "uuid";
 import { Agent } from 'https';
 
@@ -21,7 +24,7 @@ export default class SQS {
   private name: string;
   private emitter: EventEmitter;
   private config: Record<string, any>;
-  private client: AWS.SQS;
+  private client: SQSClient;
   private queues: Record<string, string>;
 
   constructor(name: string, emitter: EventEmitter, config: Record<string, any> = {}) {
@@ -83,7 +86,7 @@ export default class SQS {
         ...(region && { region }),
         ...(accountId && { accountId })
       };
-      this.client = new AWS.SQS(this.config);
+      this.client = new SQSClient(this.config);
       this.log(`Connected on SQS:${this.name}`, this.config);
       return this;
     } catch (err: any) {
@@ -107,7 +110,7 @@ export default class SQS {
    * @param {String} opts.FifoQueue='false' [Use FIFO (true) or Standard queue (false)]
    * @return {Promise}
    */
-  async createQueue(name: string, opts: QueueAttributeMap = {}): Promise<void> {
+  async createQueue(name: string, opts: Record<string, string> = {}): Promise<void> {
     const options = Object.assign(
       {
         // FifoQueue: 'false', // use standard by default
@@ -115,12 +118,11 @@ export default class SQS {
       opts
     );
     try {
-      const response = await this.client
-        .createQueue({
-          QueueName: name,
-          Attributes: options,
-        })
-        .promise();
+      const command = new CreateQueueCommand({
+        QueueName: name,
+        Attributes: options,
+      });
+      const response = await this.client.send(command);
       const queueUrl = response.QueueUrl;
       const message = `Created queue ${name} => ${queueUrl}`;
       this.log(message, { name, queueUrl });
@@ -147,7 +149,7 @@ export default class SQS {
     meta: Record<string, any> = {},
     handle: boolean = true,
     options: Record<string, any> = {}
-  ): Promise<PromiseResult<SendMessageResult, AWSError>> {
+  ): Promise<SendMessageResult> {
     const params: SendMessageRequest = {
       QueueUrl: this.getQueueUrl(name),
       MessageBody: JSON.stringify({ content, meta }),
@@ -158,7 +160,8 @@ export default class SQS {
     }
 
     try {
-      const res = await this.client.sendMessage(params).promise();
+      const command = new SendMessageCommand(params);
+      const res = await this.client.send(command);
       return res;
     } catch (err) {
       this.error(err, {
@@ -189,7 +192,7 @@ export default class SQS {
     meta: Record<string, any> = {},
     handle: boolean = true,
     options: Record<string, any> = {}
-  ): Promise<PromiseResult<SendMessageBatchResult, AWSError>> {
+  ): Promise<SendMessageBatchResult> {
     let DelaySeconds: number | undefined;
     if (typeof options.delay === "number") {
       DelaySeconds = options.delay;
@@ -205,7 +208,8 @@ export default class SQS {
     };
 
     try {
-      const res = await this.client.sendMessageBatch(params).promise();
+      const command = new SendMessageBatchCommand(params);
+      const res = await this.client.send(command);
       return res;
     } catch (err) {
       this.error(err, {
@@ -226,7 +230,7 @@ export default class SQS {
     meta: Record<string, any> = {},
     group: Record<string, any>,
     handle: boolean = true
-  ): Promise<PromiseResult<SendMessageResult, AWSError>> {
+  ): Promise<SendMessageResult> {
     const params: SendMessageRequest = {
       QueueUrl: this.getQueueUrl(name),
       MessageBody: JSON.stringify({ content, meta }),
@@ -234,7 +238,8 @@ export default class SQS {
       MessageDeduplicationId: group.id,
     };
     try {
-      const res = await this.client.sendMessage(params).promise();
+      const command = new SendMessageCommand(params);
+      const res = await this.client.send(command);
       return res;
     } catch (err) {
       this.error(err, {
@@ -316,7 +321,8 @@ export default class SQS {
       ReceiptHandle: handle,
     };
 
-    await this.client.deleteMessage(params).promise();
+    const command = new DeleteMessageCommand(params);
+    await this.client.send(command);
   }
 
   async returnMessage(name: string, messageId: any, handle: string) {
@@ -326,7 +332,8 @@ export default class SQS {
       ReceiptHandle: handle,
       VisibilityTimeout: 0,
     };
-    await this.client.changeMessageVisibility(params).promise();
+    const command = new ChangeMessageVisibilityCommand(params);
+    await this.client.send(command);
   }
 
   async fetchMessages(name: string, number = 10) {
@@ -335,25 +342,23 @@ export default class SQS {
       QueueUrl: queueUrl,
       MaxNumberOfMessages: number,
     };
-    const res = await this.client.receiveMessage(params).promise();
-    return res.Messages.map((msg) => {
-      return [
-        {
-          data: safeJSON(msg.Body),
-          ack: () => {
-            return this.deleteMessage(name, msg.MessageId, msg.ReceiptHandle);
-          },
-          nack: () => {
-            return this.returnMessage(name, msg.MessageId, msg.ReceiptHandle);
-          },
+    const command = new ReceiveMessageCommand(params);
+    const res = await this.client.send(command);
+    const messages = res.Messages || [];
+    return messages.map((msg) => {
+      return {
+        data: safeJSON(msg.Body),
+        id: msg.MessageId,
+        handle: msg.ReceiptHandle,
+        queueAttributes: msg.Attributes,
+        messageAttributes: msg.MessageAttributes,
+        ack: () => {
+          return this.deleteMessage(name, msg.MessageId, msg.ReceiptHandle);
         },
-        {
-          id: msg.MessageId,
-          handle: msg.ReceiptHandle,
-          queueAttributes: msg.Attributes,
-          messageAttributes: msg.MessageAttributes,
+        nack: () => {
+          return this.returnMessage(name, msg.MessageId, msg.ReceiptHandle);
         },
-      ];
+      };
     });
   }
 

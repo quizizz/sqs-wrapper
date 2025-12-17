@@ -1,8 +1,5 @@
-/// <reference types="node" />
-import AWS, { AWSError } from "aws-sdk";
-import EventEmitter from "events";
-import { QueueAttributeMap, SendMessageBatchResult, SendMessageResult } from "aws-sdk/clients/sqs";
-import { PromiseResult } from "aws-sdk/lib/request";
+import { SendMessageBatchResult, SendMessageResult } from "@aws-sdk/client-sqs";
+import { EventEmitter } from "events";
 export default class SQS {
     private name;
     private emitter;
@@ -37,7 +34,7 @@ export default class SQS {
      * @param {String} opts.FifoQueue='false' [Use FIFO (true) or Standard queue (false)]
      * @return {Promise}
      */
-    createQueue(name: string, opts?: QueueAttributeMap): Promise<void>;
+    createQueue(name: string, opts?: Record<string, string>): Promise<void>;
     /**
      * Publish on SQS
      * @param  {string}  name
@@ -48,7 +45,7 @@ export default class SQS {
      * @param  {Number}  [options.delay]  [in seconds]
      * @return {Promise}
      */
-    publish(name: string, content: Record<string, any>, meta?: Record<string, any>, handle?: boolean, options?: Record<string, any>): Promise<PromiseResult<SendMessageResult, AWSError>>;
+    publish(name: string, content: Record<string, any>, meta?: Record<string, any>, handle?: boolean, options?: Record<string, any>): Promise<SendMessageResult>;
     /**
      * Publish on SQS in batch
      * @param  {string}  name
@@ -59,8 +56,8 @@ export default class SQS {
      * @param  {Number}  [options.delay]  [in seconds]
      * @return {Promise}
      */
-    publishBatch(name: string, contentList: Record<string, any>[], meta?: Record<string, any>, handle?: boolean, options?: Record<string, any>): Promise<PromiseResult<SendMessageBatchResult, AWSError>>;
-    publishFifo(name: string, content: Record<string, any>, meta: Record<string, any>, group: Record<string, any>, handle?: boolean): Promise<PromiseResult<SendMessageResult, AWSError>>;
+    publishBatch(name: string, contentList: Record<string, any>[], meta?: Record<string, any>, handle?: boolean, options?: Record<string, any>): Promise<SendMessageBatchResult>;
+    publishFifo(name: string, content: Record<string, any>, meta: Record<string, any>, group: Record<string, any>, handle?: boolean): Promise<SendMessageResult>;
     getQueueUrl(name: string): string;
     /**
      * Subscribe to a queue, using long polling
@@ -68,22 +65,14 @@ export default class SQS {
     subscribe(name: string, cb: (arg1: Record<string, any>, arg2: Record<string, any>) => void, opts?: Record<string, any>): Promise<unknown>;
     deleteMessage(name: string, messageId: any, handle: string): Promise<void>;
     returnMessage(name: string, messageId: any, handle: string): Promise<void>;
-    fetchMessages(name: string, number?: number): Promise<({
+    fetchMessages(name: string, number?: number): Promise<{
         data: any;
-        ack: () => Promise<void>;
-        nack: () => Promise<void>;
-        id?: undefined;
-        handle?: undefined;
-        queueAttributes?: undefined;
-        messageAttributes?: undefined;
-    } | {
         id: string;
         handle: string;
-        queueAttributes: AWS.SQS.MessageSystemAttributeMap;
-        messageAttributes: AWS.SQS.MessageBodyAttributeMap;
-        data?: undefined;
-        ack?: undefined;
-        nack?: undefined;
-    })[][]>;
+        queueAttributes: Partial<Record<import("@aws-sdk/client-sqs").MessageSystemAttributeName, string>>;
+        messageAttributes: Record<string, import("@aws-sdk/client-sqs").MessageAttributeValue>;
+        ack: () => Promise<void>;
+        nack: () => Promise<void>;
+    }[]>;
     fetchOne(name: string): Promise<any>;
 }
