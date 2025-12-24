@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/akshendra/sqs-wrapper#readme",
   "devDependencies": {
-    "@types/node": "^16.11.7",
+    "@types/node": "^16.18.126",
     "@types/uuid": "^9.0.2",
     "@typescript-eslint/eslint-plugin": "^4.29.3",
     "@typescript-eslint/parser": "^4.29.3",
@@ -38,7 +38,7 @@
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.600.0",
     "safely-parse-json": "0.1.0",
-    "sqs-consumer": "5.8.0",
+    "sqs-consumer": "^10.3.0",
     "uuid": "^9.0.0"
   }
 }

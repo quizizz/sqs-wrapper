@@ -12,12 +12,13 @@ import {
   ChangeMessageVisibilityRequest,
   DeleteMessageRequest,
   SendMessageBatchRequest,
+  Message,
 } from "@aws-sdk/client-sqs";
 import safeJSON from "safely-parse-json";
 import { Consumer } from "sqs-consumer";
 import { EventEmitter } from "events";
 import { v4 as uuidv4 } from "uuid";
-import { Agent } from 'https';
+import { Agent } from "https";
 
 export default class SQS {
   private name: string;
@@ -26,7 +27,11 @@ export default class SQS {
   private client: SQSClient;
   private queues: Record<string, string>;
 
-  constructor(name: string, emitter: EventEmitter, config: Record<string, any> = {}) {
+  constructor(
+    name: string,
+    emitter: EventEmitter,
+    config: Record<string, any> = {}
+  ) {
     this.name = name;
     this.emitter = emitter;
     if (!config.httpOptions) {
@@ -39,7 +44,7 @@ export default class SQS {
     this.config = Object.assign(
       {
         region: "us-east-1",
-        accountId: '399771530480',
+        accountId: "399771530480",
       },
       config
     );
@@ -72,7 +77,7 @@ export default class SQS {
 
   /**
    * Initializes the SQS client with the provided region and account ID.
-   * 
+   *
    * @param {string} [region] - The AWS region to set for the SQS client.
    * @param {string} [accountId] - The AWS account ID to set for the SQS client.
    * @returns {Promise<SQS>} A promise that resolves to the initialized SQS client.
@@ -80,10 +85,15 @@ export default class SQS {
    */
   async init(region?: string, accountId?: string): Promise<SQS> {
     try {
+      const endpoint =
+        this.config.endpoint ||
+        process.env.AWS_ENDPOINT_URL_SQS ||
+        process.env.AWS_ENDPOINT_URL;
       this.config = {
         ...this.config,
         ...(region && { region }),
-        ...(accountId && { accountId })
+        ...(accountId && { accountId }),
+        ...(endpoint && { endpoint }),
       };
       this.client = new SQSClient(this.config);
       this.log(`Connected on SQS:${this.name}`, this.config);
@@ -109,7 +119,10 @@ export default class SQS {
    * @param {String} opts.FifoQueue='false' [Use FIFO (true) or Standard queue (false)]
    * @return {Promise}
    */
-  async createQueue(name: string, opts: Record<string, string> = {}): Promise<void> {
+  async createQueue(
+    name: string,
+    opts: Record<string, string> = {}
+  ): Promise<void> {
     const options = Object.assign(
       {
         // FifoQueue: 'false', // use standard by default
@@ -126,7 +139,7 @@ export default class SQS {
       const message = `Created queue ${name} => ${queueUrl}`;
       this.log(message, { name, queueUrl });
     } catch (err) {
-      console.log('error creating the queue: ', err);
+      console.log("error creating the queue: ", err);
       this.error(err, { name, options });
       throw err;
     }
@@ -260,6 +273,9 @@ export default class SQS {
   }
 
   getQueueUrl(name: string): string {
+    if (this.config.endpoint) {
+      return `${this.config.endpoint}/${this.config.accountId}/${name}`;
+    }
     return `https://sqs.${this.config.region}.amazonaws.com/${this.config.accountId}/${name}`;
   }
 
@@ -275,7 +291,7 @@ export default class SQS {
     return new Promise((resolve) => {
       const sub = Consumer.create({
         queueUrl,
-        handleMessage: (msg) => {
+        handleMessage: async (msg: Message) => {
           return new Promise((_resolve, reject) => {
             cb(
               {
@@ -295,7 +311,6 @@ export default class SQS {
           });
         },
         batchSize: opts.maxInProgress || 10,
-        // @ts-ignore
         sqs: this.client,
       });
 
